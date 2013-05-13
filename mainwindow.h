@@ -24,6 +24,12 @@ private slots:
 
     void show_cvimg(cv::Mat &img, int);
 
+    void slider_sets_feature_value(int value);
+
+    void slider_sets_nndr_value(int value);
+
+    void slider_sets_nMatches_value(int value);
+
     void on_button_open_under_clicked();
 
     void on_button_open_over_clicked();
@@ -34,6 +40,11 @@ private:
     Ui::MainWindow *ui;
     cv::Mat image; // the image variable
     QStringList under_list, over_list;
+    //custom adjustable
+    double feature_tresh;
+    int nMatches;
+    //nearest neighbor distance ratio
+    float nndRatio;
 };
 
 #endif // MAINWINDOW_H
