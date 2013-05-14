@@ -25,6 +25,7 @@ MainWindow::MainWindow(QWidget *parent) :
     slider_sets_feature_value(ui->slider_feature_tresh->value());
     slider_sets_nndr_value(ui->slider_nndr->value());
     slider_sets_nMatches_value(ui->slider_nMatches->value());
+    ui->label->hide();
 }
 
 MainWindow::~MainWindow()
@@ -109,21 +110,22 @@ void MainWindow::on_button_open_over_clicked()
 
 void MainWindow::on_button_calc_offset_clicked()
 {
+    double t = (double)cv::getTickCount();
     //load two images
-    cv::Mat under_img = cv::imread(under_list[0].toLatin1().data());
-    cv::Mat over_img  = cv::imread(over_list[0].toLatin1().data());
+    under_img = cv::imread(under_list[0].toLatin1().data());
+    over_img  = cv::imread(over_list[0].toLatin1().data());
 
     //initialise needed Variables
         //keypoints
         std::vector< cv::KeyPoint > keypoints_under;
         std::vector< cv::KeyPoint > keypoints_over;
-        //images  with keypoints on top
-        cv::Mat under_img_key,over_img_key;
         //Keypoint Descriptors
         cv::Mat desc_under,desc_over;
         //vectors holding the two best nearest neighbors per descriptor
         std::vector< std::vector< cv::DMatch > > matches1;
         std::vector< std::vector< cv::DMatch > > matches2;
+        //images  with keypoints on top
+        cv::Mat under_img_key,over_img_key;
         //vector holding the best nearest neighbor per descriptor
         std::vector< cv::DMatch > good_matches;
         //image showing matches (connected with lines)
@@ -208,10 +210,10 @@ void MainWindow::on_button_calc_offset_clicked()
     std::copy(good_matches.begin(),good_matches.end(),show_matches.begin());
     if (show_matches.size() > nMatches)
     {
-    std::nth_element(   show_matches.begin(),
-                        show_matches.begin()+nMatches,
-                        show_matches.end());
-    show_matches.erase(show_matches.begin()+nMatches+1, show_matches.end());
+        std::nth_element(   show_matches.begin(),
+                            show_matches.begin()+nMatches,
+                            show_matches.end());
+        show_matches.erase(show_matches.begin()+nMatches+1, show_matches.end());
     }
     //print Matches on images and show images
     cv::drawMatches(over_img,keypoints_over, // 1st image and its keypoints
@@ -219,6 +221,26 @@ void MainWindow::on_button_calc_offset_clicked()
                     show_matches,            // the matches
                     imageMatches,      // the image produced
                     cv::Scalar(255,255,255)); // color of the lines
+    ui->label->show();
     show_cvimg(imageMatches,2);
 
+    //get corresponding points
+    for( int i = 0; i < good_matches.size(); i++ )
+    {
+        //-- Get the keypoints from the good matches
+        matchpoints_1.push_back( keypoints_over[ good_matches[i].queryIdx ].pt );
+        matchpoints_2.push_back( keypoints_under[ good_matches[i].trainIdx ].pt );
+    }
+    cv::Mat H = cv::findHomography(matchpoints_1,matchpoints_2,CV_RANSAC);
+    cv::Mat result;
+    cv::warpPerspective(over_img,result,H,cv::Size(under_img.cols,under_img.rows));
+    cv::imwrite("/Users/FaisalZ/Desktop/test.png",result);
+    ui->label_time->setNum((double)(((int)(100.0*(((double)cv::getTickCount() - t)/cv::getTickFrequency())))/100.0));
+}
+
+void MainWindow::on_button_apply_clicked()
+{
+    ui->img_over->hide();
+    ui->label->hide();
+    //show_cvimg(result,0);
 }
