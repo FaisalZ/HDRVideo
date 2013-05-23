@@ -38,14 +38,14 @@ private slots:
 
     void on_button_apply_clicked();
 
+    void keyPressEvent(QKeyEvent *k);
+
 private:
     Ui::MainWindow *ui;
     //Vectores storing the corresponding points
     std::vector< cv::Point2f > matchpoints_1,matchpoints_2;
-    //images
-    cv::Mat under_img,over_img;
-    cv::Mat image; // the image variable
     QStringList under_list, over_list;
+    cv::Mat H;
     //custom adjustable
     double feature_tresh;
     int nMatches;

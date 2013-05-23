@@ -62,8 +62,11 @@ void MainWindow::show_cvimg(cv::Mat &img, int f)
     // change color channel ordering from BGR to RGB
     cv::Mat img_new;
     cv::cvtColor(img,img_new,CV_BGR2RGB);
-    //double shift = qPow(2,4);
-    //cv::convertScaleAbs(img_new,img_new,0.25,shift);
+    //convert img from 16bit to 8bit
+    if (img_new.type() == 18)
+    {
+        img_new.convertTo(img_new, CV_8U, 0.00390625);
+    }
     // convert cv::Mat to QImage and resize the image to fit the lable
     QImage qimg= QImage((const unsigned char*)(img_new.data),img_new.cols,img_new.rows,QImage::Format_RGB888);
     // display QImage on label
@@ -85,6 +88,12 @@ void MainWindow::show_cvimg(cv::Mat &img, int f)
         ui->label->setPixmap(QPixmap::fromImage(qimg));
         ui->label->resize(ui->label->pixmap()->size());
     }
+    else if (f == 3)
+    {
+        qimg = qimg.scaledToWidth(1005);
+        ui->label->setPixmap(QPixmap::fromImage(qimg));
+        ui->label->resize(ui->label->pixmap()->size());
+    }
 }
 
 void MainWindow::on_button_open_under_clicked()
@@ -92,7 +101,7 @@ void MainWindow::on_button_open_under_clicked()
     under_list = QFileDialog::getOpenFileNames(this,tr("Open underexposed Images"), ".",tr("Image Files (*.png)"));
     if (under_list.length() > 0)
     {
-        image= cv::imread(under_list[0].toLatin1().data());
+        cv::Mat image= cv::imread(under_list[0].toLatin1().data(), -1);
         //image = cvLoadImage(under_list[0].toLatin1().data(),2);
         show_cvimg(image,0);
     }
@@ -103,7 +112,7 @@ void MainWindow::on_button_open_over_clicked()
     over_list = QFileDialog::getOpenFileNames(this,tr("Open overexposed Images"), ".",tr("Image Files (*.png)"));
     if (over_list.length() > 0)
     {
-        image= cv::imread(over_list[0].toLatin1().data());
+        cv::Mat image= cv::imread(over_list[0].toLatin1().data(), -1);
         //image = cvLoadImage(over_list[0].toLatin1().data(),2);
         show_cvimg(image,1);
     }
@@ -116,8 +125,8 @@ void MainWindow::on_button_calc_offset_clicked()
         //start timer
         double t = (double)cv::getTickCount();
         //load two images
-        under_img = cv::imread(under_list[0].toLatin1().data());
-        over_img  = cv::imread(over_list[0].toLatin1().data());
+        cv::Mat under_img = cv::imread(under_list[0].toLatin1().data());
+        cv::Mat over_img  = cv::imread(over_list[0].toLatin1().data());
 
         //initialise needed Variables
             //keypoints
@@ -237,10 +246,10 @@ void MainWindow::on_button_calc_offset_clicked()
         }
 
         //calculate perspective transformation
-        cv::Mat H = cv::findHomography(matchpoints_1,matchpoints_2,CV_RANSAC);
-        cv::Mat result;
-        cv::warpPerspective(over_img,result,H,cv::Size(under_img.cols,under_img.rows));
-        cv::imwrite("/Users/FaisalZ/Desktop/test.png",result);
+        H = cv::findHomography(matchpoints_1,matchpoints_2,CV_RANSAC);
+        //cv::Mat result;
+        //cv::warpPerspective(over_img,result,H,cv::Size(under_img.cols,under_img.rows));
+        //cv::imwrite("/Users/FaisalZ/Desktop/test.png",result);
         //output time taken in seconds
         ui->label_time->setNum((double)(((int)(100.0*(((double)cv::getTickCount() - t)/cv::getTickFrequency())))/100.0));
     }
@@ -254,7 +263,39 @@ void MainWindow::on_button_calc_offset_clicked()
 
 void MainWindow::on_button_apply_clicked()
 {
-    ui->img_over->hide();
-    ui->label->hide();
-    //show_cvimg(result,0);
+    if(over_list.length() > 0 && under_list.length() > 0 && !H.empty())
+    {
+        cv::Mat over_img = cv::imread(over_list[0].toLatin1().data(), -1);
+        cv::Mat under_img = cv::imread(under_list[0].toLatin1().data(), -1);
+        cv::Mat result;
+        cv::warpPerspective(over_img,result,H,cv::Size(under_img.cols,under_img.rows));
+        ui->img_over->hide();
+        ui->img_under->hide();
+        show_cvimg(result,3);
+        QString filename = QFileDialog::getSaveFileName( this,
+                                                         tr("Save Warped Image"),
+                                                         QDir::homePath(),
+                                                         tr("Documents (*.png)") );
+        if(filename != "")
+        {
+            cv::imwrite(filename.toLatin1().data(),result);
+        }
+    }
+    else
+    {
+        QMessageBox msgBox;
+        msgBox.setText("You need to calculate the offset first!");
+        msgBox.exec();
+    }
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+ /*   switch(event->key())
+    {
+        case Qt::Key_Up:
+            centerLabel->setText(tr("Press ↑"));
+            break;
+        case Qt::Key_Left:
+    }*/
 }

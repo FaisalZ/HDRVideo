@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>806</width>
-    <height>428</height>
+    <height>441</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -92,6 +92,9 @@ color: rgb(255, 255, 255);</string>
       </property>
       <property name="text">
        <string/>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
       </property>
      </widget>
     </item>
