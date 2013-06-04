@@ -13,6 +13,8 @@
 #include <qmath.h>
 #include <QLabel>
 #include <QMessageBox>
+#include <QScrollArea>
+#include <QKeyEvent>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -22,11 +24,19 @@ MainWindow::MainWindow(QWidget *parent) :
     connect( ui->slider_feature_tresh, SIGNAL( valueChanged(int) ), this   , SLOT(  slider_sets_feature_value(int) ) );
     connect( ui->slider_nndr, SIGNAL( valueChanged(int) ), this   , SLOT( slider_sets_nndr_value(int) ) );
     connect( ui->slider_nMatches, SIGNAL( valueChanged(int) ), this  , SLOT( slider_sets_nMatches_value(int) ) );
+    connect( ui->slider_zoom, SIGNAL( valueChanged(int) ), this  , SLOT( slider_sets_zoom_value(int) ) );
+    //connect( ui->under_scrollArea, SIGNAL( valueChanged(int) ), ui->over_scrollArea  , SLOT( setValue(int) ) );
+    //connect( ui->over_scrollArea->horizontalScrollBar(), SIGNAL( valueChanged(int) ), ui->under_scrollArea->horizontalScrollBar()  , SLOT( setValue(int) ) );
+    //connect( ui->under_scrollArea->verticalScrollBar(), SIGNAL( valueChanged(int) ), ui->over_scrollArea->verticalScrollBar()  , SLOT( setValue(int) ) );
+    //connect( ui->over_scrollArea->verticalScrollBar(), SIGNAL( valueChanged(int) ), ui->under_scrollArea->verticalScrollBar()  , SLOT( setValue(int) ) );
     //set initial values
     slider_sets_feature_value(ui->slider_feature_tresh->value());
     slider_sets_nndr_value(ui->slider_nndr->value());
     slider_sets_nMatches_value(ui->slider_nMatches->value());
     ui->label->hide();
+    ui->under_scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    ui->over_scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    ui->label->installEventFilter(this);
 }
 
 MainWindow::~MainWindow()
@@ -52,48 +62,18 @@ void MainWindow::slider_sets_nMatches_value(int value)
     nMatches = value;
 }
 
-
-/*Method that converts cv::Mat to QImage and displays it on a label
- *@param    &img    pointer to cv::Mat
- *@param    f       index of target label (0 -> left, 1 -> right)
- */
-void MainWindow::show_cvimg(cv::Mat &img, int f)
+void MainWindow::slider_sets_zoom_value(int value)
 {
-    // change color channel ordering from BGR to RGB
-    cv::Mat img_new;
-    cv::cvtColor(img,img_new,CV_BGR2RGB);
-    //convert img from 16bit to 8bit
-    if (img_new.type() == 18)
-    {
-        img_new.convertTo(img_new, CV_8U, 0.00390625);
-    }
-    // convert cv::Mat to QImage and resize the image to fit the lable
-    QImage qimg= QImage((const unsigned char*)(img_new.data),img_new.cols,img_new.rows,QImage::Format_RGB888);
-    // display QImage on label
-    if (f == 0)
-    {
-        qimg = qimg.scaledToWidth(500);
-        ui->img_under->setPixmap(QPixmap::fromImage(qimg));
-        ui->img_under->resize(ui->img_under->pixmap()->size());
-    }
-    else if (f == 1)
-    {
-        qimg = qimg.scaledToWidth(500);
-        ui->img_over->setPixmap(QPixmap::fromImage(qimg));
-        ui->img_over->resize(ui->img_over->pixmap()->size());
-    }
-    else if (f == 2)
-    {
-        qimg = qimg.scaledToWidth(1005);
-        ui->label->setPixmap(QPixmap::fromImage(qimg));
-        ui->label->resize(ui->label->pixmap()->size());
-    }
-    else if (f == 3)
-    {
-        qimg = qimg.scaledToWidth(1005);
-        ui->label->setPixmap(QPixmap::fromImage(qimg));
-        ui->label->resize(ui->label->pixmap()->size());
-    }
+    ui->label_zoom->setNum(value);
+    /*float scaleFactor = value/100;
+    QPixmap temp = img_left->pixmap();
+    img_left = new QLabel;
+    img_left->setPixmap(QPixmap::fromImage(qimg));
+    ui->under_scrollArea->setBackgroundRole(QPalette::Dark);
+    ui->under_scrollArea->setWidget(img_left);
+
+    img_left->resize(scaleFactor * img_left->pixmap()->size());
+    ui->under_scrollArea->setWidget(img_left);*/
 }
 
 void MainWindow::on_button_open_under_clicked()
@@ -120,6 +100,8 @@ void MainWindow::on_button_open_over_clicked()
 
 void MainWindow::on_button_calc_offset_clicked()
 {
+    ui->under_scrollArea->show();
+    ui->over_scrollArea->show();
     if(over_list.length() > 0 && under_list.length() > 0)
     {
         //start timer
@@ -247,9 +229,6 @@ void MainWindow::on_button_calc_offset_clicked()
 
         //calculate perspective transformation
         H = cv::findHomography(matchpoints_1,matchpoints_2,CV_RANSAC);
-        //cv::Mat result;
-        //cv::warpPerspective(over_img,result,H,cv::Size(under_img.cols,under_img.rows));
-        //cv::imwrite("/Users/FaisalZ/Desktop/test.png",result);
         //output time taken in seconds
         ui->label_time->setNum((double)(((int)(100.0*(((double)cv::getTickCount() - t)/cv::getTickFrequency())))/100.0));
     }
@@ -269,9 +248,44 @@ void MainWindow::on_button_apply_clicked()
         cv::Mat under_img = cv::imread(under_list[0].toLatin1().data(), -1);
         cv::Mat result;
         cv::warpPerspective(over_img,result,H,cv::Size(under_img.cols,under_img.rows));
-        ui->img_over->hide();
-        ui->img_under->hide();
+
+        //obsolent: croping images to not view black edges
+        /*cv::Mat p00(1,3,H.type());
+        p00.at<double>(0,0) = 0;
+        p00.at<double>(1,0) = 0;
+        p00.at<double>(2,0) = 1;
+        cv::Mat p01(1,3,H.type());
+        p01.at<double>(0,0) = result.cols-1;
+        p01.at<double>(1,0) = 0;
+        p01.at<double>(2,0) = 1;
+        cv::Mat p10(1,3,H.type());
+        p10.at<double>(0,0) = 0;
+        p10.at<double>(1,0) = result.rows-1;
+        p10.at<double>(2,0) = 1;
+        cv::Mat p11(1,3,H.type());
+        p11.at<double>(0,0) = result.cols-1;
+        p11.at<double>(1,0) = result.rows-1;
+        p11.at<double>(2,0) = 1;
+        p00 = p00*H;
+        p01 = p01*H;
+        p10 = p10*H;
+        p11 = p11*H;
+        int t,b,l,r;
+        (p00.at<double>(1,0) > p01.at<double>(1,0)) ? t = p00.at<double>(1,0) : t = p01.at<double>(1,0);
+        (p00.at<double>(0,0) > p10.at<double>(0,0)) ? l = p00.at<double>(0,0) : l = p10.at<double>(0,0);
+        (p01.at<double>(1,0) < p11.at<double>(1,0)) ? r = p01.at<double>(1,0) : r = p11.at<double>(1,0);
+        (p10.at<double>(0,0) < p11.at<double>(0,0)) ? b = p10.at<double>(0,0) : b = p11.at<double>(0,0);
+
+        cv::Mat subImg = result(cv::Rect(l,t,r-l,b-t));
+        result = subImg.resize(result.size,1);*/
+
+        //ui->img_over->hide();
+        //ui->img_under->hide();
+        ui->under_scrollArea->hide();
+        ui->over_scrollArea->hide();
         show_cvimg(result,3);
+        position = 0;
+        ready = true;
         QString filename = QFileDialog::getSaveFileName( this,
                                                          tr("Save Warped Image"),
                                                          QDir::homePath(),
@@ -289,13 +303,208 @@ void MainWindow::on_button_apply_clicked()
     }
 }
 
-void MainWindow::keyPressEvent(QKeyEvent *event)
+void MainWindow::keyPressEvent(QKeyEvent *e)
 {
- /*   switch(event->key())
+    if(ready)
     {
-        case Qt::Key_Up:
-            centerLabel->setText(tr("Press ↑"));
-            break;
-        case Qt::Key_Left:
-    }*/
+        switch( e->key())
+        {
+            case 87: //up(w)
+            {
+                cv::Mat img = cv::imread(under_list[position].toLatin1().data(), -1);
+                show_cvimg(img,3);
+                /*QMessageBox msgBox;
+                msgBox.setText("Press ↑");
+                msgBox.exec();*/
+                break;
+            }
+            case 83: //down(s)
+            {
+                cv::Mat over_img = cv::imread(over_list[position].toLatin1().data(), -1);
+                cv::Mat under_img = cv::imread(under_list[position].toLatin1().data(), -1);
+                cv::Mat img;
+                cv::warpPerspective(over_img,img,H,cv::Size(under_img.cols,under_img.rows));
+                show_cvimg(img,3);
+                break;
+            }
+            case 65: //left(a)
+            {
+                if(position-1 >= 0)
+                {
+                    position--;
+                    cv::Mat img = cv::imread(under_list[position].toLatin1().data(), -1);
+                    show_cvimg(img,3);
+                }
+                break;
+            }
+            case 68: //right(d)
+            {
+            if(position+1 < over_list.length() && position+1 < under_list.length())
+            {
+                position++;
+                cv::Mat img = cv::imread(under_list[position].toLatin1().data(), -1);
+                show_cvimg(img,3);
+            }
+                break;
+            }
+        }
+    }
 }
+
+
+/*Method that reads an png image and converts it into linear
+ *@param    &path       path to image
+ *@return   cv::Mat     linearized image
+ */
+cv::Mat MainWindow::read_linear(QString path)
+{
+    cv::Mat pic;
+    QString identifer = path.right(31);
+    int iso = 0;
+    double lowerClip, upperClip,a,b,c,d,e,f;
+    identifer = identifer.left(7);
+    if(identifer == "001C003" ||
+       identifer == "001C011" ||
+       identifer == "005C003" ||
+       identifer == "005C005")
+    {
+        iso = 1600;
+        lowerClip = floor(0.125*65535);
+        upperClip = ceil(0.915*65535);
+        a = 5.555556;
+        b = 0.038625;
+        c = 0.237781;
+        d = 0.387093;
+        e = 5.163350;
+        f = 0.092824;
+    }
+    if(identifer == "002C001" ||
+       identifer == "002C004" ||
+       identifer == "002C006" ||
+       identifer == "002C012" ||
+       identifer == "003C005" ||
+       identifer == "004C003" ||
+       identifer == "004C011" ||
+       identifer == "004C020" ||
+       identifer == "004C021" ||
+       identifer == "005C003" ||
+       identifer == "005C005" ||
+       identifer == "003C005" ||
+       identifer == "006C003" ||
+       identifer == "006C008")
+    {
+        iso = 800;
+        lowerClip = floor(0.15*65535);
+        upperClip = ceil(0.882*65535);
+        a = 5.555556;
+        b = 0.052272;
+        c = 0.247190;
+        d = 0.385537;
+        e = 5.367655;
+        f = 0.092809;
+    }
+
+    if(iso == 0)
+    {
+        QMessageBox msgBox;
+        msgBox.setText("Unable to identify iso value.");
+        msgBox.exec();
+    }
+    else
+    {
+        pic = cv::imread(path.toLatin1().data(), -1);
+        double index = e*lowerClip+f;
+        for(int y = 0; y < pic.rows; y++)
+        {
+            for(int x = 0; x < pic.cols; x++)
+            {
+                if(pic.at<double>(x,y) > upperClip)
+                {
+                    pic.at<double>(x,y) = upperClip;
+                }
+                if(pic.at<double>(x,y) > index)
+                {
+                    pic.at<double>(x,y) = (qPow(10,(pic.at<double>(x,y)-d)/c)-b)/a;
+                }
+                else
+                {
+                    pic.at<double>(x,y) = (pic.at<double>(x,y)-f)/e;
+                }
+            }
+        }
+    }
+
+}
+
+/*Method that converts cv::Mat to QImage and displays it on a label
+ *@param    &img    pointer to cv::Mat
+ *@param    f       index of target label (0 -> left, 1 -> right)
+ */
+void MainWindow::show_cvimg(cv::Mat &img, int f)
+{
+    // change color channel ordering from BGR to RGB
+    cv::Mat img_new;
+    cv::cvtColor(img,img_new,CV_BGR2RGB);
+    //convert img from 16bit to 8bit
+    if (img_new.type() == 18)
+    {
+        img_new.convertTo(img_new, CV_8U, 0.00390625);
+    }
+    // convert cv::Mat to QImage and resize the image to fit the lable
+    QImage qimg= QImage((const unsigned char*)(img_new.data),img_new.cols,img_new.rows,QImage::Format_RGB888);
+    // display QImage on label
+    if (f == 0)
+    {
+        img_left = new QLabel;
+        img_left->setPixmap(QPixmap::fromImage(qimg));
+        ui->under_scrollArea->setBackgroundRole(QPalette::Dark);
+        ui->under_scrollArea->setWidget(img_left);
+
+        //qimg = qimg.scaledToWidth(500);
+        //ui->img_under->setPixmap(QPixmap::fromImage(qimg));
+        //ui->img_under->resize(ui->img_under->pixmap()->size());
+    }
+    else if (f == 1)
+    {
+        img_right = new QLabel;
+        img_right->setPixmap(QPixmap::fromImage(qimg));
+        ui->over_scrollArea->setBackgroundRole(QPalette::Dark);
+        ui->over_scrollArea->setWidget(img_right);
+        //qimg = qimg.scaledToWidth(500);
+        //ui->img_over->setPixmap(QPixmap::fromImage(qimg));
+        //ui->img_over->resize(ui->img_over->pixmap()->size());
+    }
+    else if (f == 2)
+    {
+        qimg = qimg.scaledToWidth(1005);
+        ui->label->setPixmap(QPixmap::fromImage(qimg));
+        ui->label->resize(ui->label->pixmap()->size());
+    }
+    else if (f == 3)
+    {
+        //ui->label->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Ignored);
+        qimg = qimg.scaledToWidth(1200);
+        ui->label->setPixmap(QPixmap::fromImage(qimg));
+        ui->label->resize(ui->label->pixmap()->size());
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

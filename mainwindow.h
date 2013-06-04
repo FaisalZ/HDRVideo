@@ -7,6 +7,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <QTextStream>
 #include <QStringList>
+#include <QLabel>
+#include <QKeyEvent>
 
 namespace Ui {
 class MainWindow;
@@ -30,6 +32,8 @@ private slots:
 
     void slider_sets_nMatches_value(int value);
 
+    void slider_sets_zoom_value(int value);
+
     void on_button_open_under_clicked();
 
     void on_button_open_over_clicked();
@@ -38,7 +42,9 @@ private slots:
 
     void on_button_apply_clicked();
 
-    void keyPressEvent(QKeyEvent *k);
+    void keyPressEvent(QKeyEvent *e);
+
+    cv::Mat read_linear(QString path);
 
 private:
     Ui::MainWindow *ui;
@@ -51,6 +57,13 @@ private:
     int nMatches;
     //nearest neighbor distance ratio
     float nndRatio;
+    //displayed images
+    QLabel *img_left;
+    QLabel *img_right;
+    QLabel *img_bottom;
+    //position for review
+    int position;
+    bool ready;
 };
 
 #endif // MAINWINDOW_H
