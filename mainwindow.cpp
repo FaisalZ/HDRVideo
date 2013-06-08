@@ -24,19 +24,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connect( ui->slider_feature_tresh, SIGNAL( valueChanged(int) ), this   , SLOT(  slider_sets_feature_value(int) ) );
     connect( ui->slider_nndr, SIGNAL( valueChanged(int) ), this   , SLOT( slider_sets_nndr_value(int) ) );
     connect( ui->slider_nMatches, SIGNAL( valueChanged(int) ), this  , SLOT( slider_sets_nMatches_value(int) ) );
-    connect( ui->slider_zoom, SIGNAL( valueChanged(int) ), this  , SLOT( slider_sets_zoom_value(int) ) );
-    //connect( ui->under_scrollArea, SIGNAL( valueChanged(int) ), ui->over_scrollArea  , SLOT( setValue(int) ) );
-    //connect( ui->over_scrollArea->horizontalScrollBar(), SIGNAL( valueChanged(int) ), ui->under_scrollArea->horizontalScrollBar()  , SLOT( setValue(int) ) );
-    //connect( ui->under_scrollArea->verticalScrollBar(), SIGNAL( valueChanged(int) ), ui->over_scrollArea->verticalScrollBar()  , SLOT( setValue(int) ) );
-    //connect( ui->over_scrollArea->verticalScrollBar(), SIGNAL( valueChanged(int) ), ui->under_scrollArea->verticalScrollBar()  , SLOT( setValue(int) ) );
     //set initial values
     slider_sets_feature_value(ui->slider_feature_tresh->value());
     slider_sets_nndr_value(ui->slider_nndr->value());
     slider_sets_nMatches_value(ui->slider_nMatches->value());
     ui->label->hide();
-    ui->under_scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    ui->over_scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    ui->label->installEventFilter(this);
+    ui->scrollArea->hide();
 }
 
 MainWindow::~MainWindow()
@@ -62,23 +55,10 @@ void MainWindow::slider_sets_nMatches_value(int value)
     nMatches = value;
 }
 
-void MainWindow::slider_sets_zoom_value(int value)
-{
-    ui->label_zoom->setNum(value);
-    /*float scaleFactor = value/100;
-    QPixmap temp = img_left->pixmap();
-    img_left = new QLabel;
-    img_left->setPixmap(QPixmap::fromImage(qimg));
-    ui->under_scrollArea->setBackgroundRole(QPalette::Dark);
-    ui->under_scrollArea->setWidget(img_left);
-
-    img_left->resize(scaleFactor * img_left->pixmap()->size());
-    ui->under_scrollArea->setWidget(img_left);*/
-}
-
 void MainWindow::on_button_open_under_clicked()
 {
     under_list = QFileDialog::getOpenFileNames(this,tr("Open underexposed Images"), ".",tr("Image Files (*.png)"));
+    under_list.sort();
     if (under_list.length() > 0)
     {
         cv::Mat image= cv::imread(under_list[0].toLatin1().data(), -1);
@@ -90,6 +70,7 @@ void MainWindow::on_button_open_under_clicked()
 void MainWindow::on_button_open_over_clicked()
 {
     over_list = QFileDialog::getOpenFileNames(this,tr("Open overexposed Images"), ".",tr("Image Files (*.png)"));
+    over_list.sort();
     if (over_list.length() > 0)
     {
         cv::Mat image= cv::imread(over_list[0].toLatin1().data(), -1);
@@ -100,15 +81,12 @@ void MainWindow::on_button_open_over_clicked()
 
 void MainWindow::on_button_calc_offset_clicked()
 {
-    ui->under_scrollArea->show();
-    ui->over_scrollArea->show();
+    ui->label_under->show();
+    ui->label_over->show();
     if(over_list.length() > 0 && under_list.length() > 0)
     {
         //start timer
         double t = (double)cv::getTickCount();
-        //load two images
-        cv::Mat under_img = cv::imread(under_list[0].toLatin1().data());
-        cv::Mat over_img  = cv::imread(over_list[0].toLatin1().data());
 
         //initialise needed Variables
             //keypoints
@@ -126,111 +104,188 @@ void MainWindow::on_button_calc_offset_clicked()
             //image showing matches (connected with lines)
             cv::Mat imageMatches;
 
-        //detect features
-        cv::SiftFeatureDetector sifter(feature_tresh);
-        sifter.detect(under_img,keypoints_under);
-        sifter.detect(over_img,keypoints_over);
+        //loop variables
+        QVector< cv::Mat > Hom;
+        int image_position = 0;
 
-        //draw keypoints on image & display images
-        cv::drawKeypoints(under_img,keypoints_under,under_img_key,cv::Scalar(0,255,0),cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-        cv::drawKeypoints(over_img,keypoints_over,over_img_key,cv::Scalar(0,255,0),cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-        show_cvimg(under_img_key,0);
-        show_cvimg(over_img_key,1);
-        ui->label_features->setNum((int)keypoints_over.size());
 
-        //run Descriptor Extractor in keypoints
-        cv::SiftDescriptorExtractor siftDesc;
-        siftDesc.compute(under_img,keypoints_under,desc_under);
-        siftDesc.compute(over_img,keypoints_over,desc_over);
-
-        //run BruteForce feature matcher
-        //the two 2 nearest neighbors per descriptor will be found
-        cv::BFMatcher matcher(cv::NORM_L2,false);
-        //matches img1 -> img2
-        matcher.knnMatch(desc_over,desc_under,matches1,2);
-        //matches img2 -> img1
-        matcher.knnMatch(desc_under,desc_over,matches2,2);
-
-        //determine the best nearest neighbor match for matches1
-        for (size_t i = 0; i < matches1.size(); ++i)
+        //perform for every 10th frame
+        while(image_position < over_list.size() && image_position < under_list.size())
         {
-            if (matches1[i].size() > 1)
+            //load two images
+            cv::Mat under_img = cv::imread(under_list[image_position].toLatin1().data());
+            cv::Mat over_img  = cv::imread(over_list[image_position].toLatin1().data());
+
+            //clear data
+            keypoints_over.clear();
+            keypoints_under.clear();
+            good_matches.clear();
+
+            //detect features
+            cv::SiftFeatureDetector sifter(feature_tresh);
+            sifter.detect(under_img,keypoints_under);
+            sifter.detect(over_img,keypoints_over);
+
+            //draw keypoints on image & display images
+            cv::drawKeypoints(under_img,keypoints_under,under_img_key,cv::Scalar(0,255,0),cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+            cv::drawKeypoints(over_img,keypoints_over,over_img_key,cv::Scalar(0,255,0),cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+            if(image_position == 0)
             {
-                if(matches1[i][0].distance/matches1[i][1].distance > nndRatio)
+                show_cvimg(under_img_key,0);
+                show_cvimg(over_img_key,1);
+                ui->label_features->setNum((int)keypoints_over.size());
+            }
+
+            //run Descriptor Extractor in keypoints
+            cv::SiftDescriptorExtractor siftDesc;
+            siftDesc.compute(under_img,keypoints_under,desc_under);
+            siftDesc.compute(over_img,keypoints_over,desc_over);
+
+            //run BruteForce feature matcher
+            //the two 2 nearest neighbors per descriptor will be found
+            cv::BFMatcher matcher(cv::NORM_L2,false);
+            //matches img1 -> img2
+            matcher.knnMatch(desc_over,desc_under,matches1,2);
+            //matches img2 -> img1
+            matcher.knnMatch(desc_under,desc_over,matches2,2);
+
+            //determine the best nearest neighbor match for matches1
+            for (size_t i = 0; i < matches1.size(); ++i)
+            {
+                if (matches1[i].size() > 1)
+                {
+                    if(matches1[i][0].distance/matches1[i][1].distance > nndRatio)
+                    {
+                        matches1[i].clear();
+                    }
+                }
+                else
                 {
                     matches1[i].clear();
                 }
             }
-            else
+            //determine the best nearest neighbor match for matches2
+            for (size_t i = 0; i < matches2.size(); ++i)
             {
-                matches1[i].clear();
-            }
-        }
-        //determine the best nearest neighbor match for matches2
-        for (size_t i = 0; i < matches2.size(); ++i)
-        {
-            if (matches2[i].size() > 1)
-            {
-                if(matches2[i][0].distance/matches2[i][1].distance > nndRatio)
+                if (matches2[i].size() > 1)
+                {
+                    if(matches2[i][0].distance/matches2[i][1].distance > nndRatio)
+                    {
+                        matches2[i].clear();
+                    }
+                }
+                else
                 {
                     matches2[i].clear();
                 }
             }
-            else
-            {
-                matches2[i].clear();
-            }
-        }
 
-        //perform symetric check
-        for (size_t i = 0; i < matches1.size(); ++i)
-        {
-            if(matches1[i].size() < 2)
-                continue;
-            for (size_t j = 0; j < matches2.size(); ++j)
+            //perform symetric check
+            for (size_t i = 0; i < matches1.size(); ++i)
             {
-                if(matches2[j].size() < 2)
+                if(matches1[i].size() < 2)
                     continue;
-                if(matches1[i][0].queryIdx == matches2[j][0].trainIdx && matches2[j][0].queryIdx == matches1[i][0].trainIdx)
+                for (size_t j = 0; j < matches2.size(); ++j)
                 {
-                    good_matches.push_back(cv::DMatch(matches1[i][0].queryIdx,matches1[i][0].trainIdx,matches1[i][0].distance));
-                    break;
+                    if(matches2[j].size() < 2)
+                        continue;
+                    if(matches1[i][0].queryIdx == matches2[j][0].trainIdx && matches2[j][0].queryIdx == matches1[i][0].trainIdx)
+                    {
+                        good_matches.push_back(cv::DMatch(matches1[i][0].queryIdx,matches1[i][0].trainIdx,matches1[i][0].distance));
+                        break;
+                    }
                 }
             }
-        }
-        ui->label_matches->setNum((int)good_matches.size());
+            if(image_position == 0)
+            {
+                ui->label_matches->setNum((int)good_matches.size());
+            }
 
-        //create a vector of Matches to be shown
-        std::vector< cv::DMatch > show_matches(good_matches.size());
-        std::copy(good_matches.begin(),good_matches.end(),show_matches.begin());
-        if (show_matches.size() > nMatches)
+            //create a vector of Matches to be shown
+            std::vector< cv::DMatch > show_matches(good_matches.size());
+            std::copy(good_matches.begin(),good_matches.end(),show_matches.begin());
+            if (show_matches.size() > nMatches)
+            {
+                std::nth_element(   show_matches.begin(),
+                                    show_matches.begin()+nMatches,
+                                    show_matches.end());
+                show_matches.erase(show_matches.begin()+nMatches+1, show_matches.end());
+            }
+
+            if(image_position == 0)
+            {
+                //print Matches on images and show images
+                cv::drawMatches(over_img,keypoints_over, // 1st image and its keypoints
+                                under_img,keypoints_under, // 2nd image and its keypoints
+                                show_matches,            // the matches
+                                imageMatches,      // the image produced
+                                cv::Scalar(255,255,255)); // color of the lines
+                show_cvimg(imageMatches,2);
+            }
+
+            //get corresponding points
+            for( int i = 0; i < good_matches.size(); i++ )
+            {
+                //-- Get the keypoints from the good matches
+                matchpoints_1.push_back( keypoints_over[ good_matches[i].queryIdx ].pt );
+                matchpoints_2.push_back( keypoints_under[ good_matches[i].trainIdx ].pt );
+            }
+
+            //calculate perspective transformation
+            Hom.append(cv::findHomography(matchpoints_1,matchpoints_2,CV_RANSAC));
+            //output time taken in seconds
+            if(image_position == 0)
+            {
+                ui->label_time->setNum((double)(((int)(100.0*(((double)cv::getTickCount() - t)/cv::getTickFrequency())))/100.0));
+            }
+            image_position = image_position+10;
+        }//end while (every 10th frame)
+        //create a csv file to store the Homography
+        QFile file("/Users/FaisalZ/Desktop/out.csv");
+        file.open(QIODevice::WriteOnly | QIODevice::Text);
+        QTextStream out(&file);
+        int counter = 0;
+        Hom.at(0).copyTo(H);
+        for(int i = 0; i < Hom.size(); i++)
         {
-            std::nth_element(   show_matches.begin(),
-                                show_matches.begin()+nMatches,
-                                show_matches.end());
-            show_matches.erase(show_matches.begin()+nMatches+1, show_matches.end());
+            counter++;
+            if(i != 0)
+            {
+                //H = H+Hom.at(i);
+            }
+            /*cv::Mat p00(1,3,H.type());
+            p00.at<double>(0,0) = 0;
+            p00.at<double>(0,1) = 0;
+            p00.at<double>(0,2) = 1;
+            cv::Mat p01(1,3,H.type());
+            p01.at<double>(0,0) = under_img_key.cols-1;
+            p01.at<double>(0,1) = 0;
+            p01.at<double>(0,2) = 1;
+            cv::Mat p10(1,3,H.type());
+            p10.at<double>(0,0) = 0;
+            p10.at<double>(0,1) = under_img_key.rows-1;
+            p10.at<double>(0,2) = 1;
+            cv::Mat p11(1,3,H.type());
+            p11.at<double>(0,0) = under_img_key.cols-1;
+            p11.at<double>(0,1) = under_img_key.rows-1;
+            p11.at<double>(0,2) = 1;
+            cv::Mat p00x = H*p00;
+            cv::Mat p01x = H*p01;
+            cv::Mat p10x = H*p10;
+            cv::Mat p11x = H*p11;
+            out << QString::number(H.at<double>(0,0))+" "+QString::number(H.at<double>(1,0))+" "+QString::number(H.at<double>(2,0))+"\n";
+            out << QString::number(H.at<double>(1,0))+" "+QString::number(H.at<double>(1,1))+" "+QString::number(H.at<double>(1,2))+"\n";
+            out << QString::number(H.at<double>(2,0))+" "+QString::number(H.at<double>(2,1))+" "+QString::number(H.at<double>(2,2))+"\n\n";
+            out << QString::number(p00x.at<double>(0,0))+" "+QString::number(p00x.at<double>(0,1))+" "+QString::number(p00x.at<double>(0,2))+"\n";
+            out << QString::number(p01x.at<double>(0,0))+" "+QString::number(p01x.at<double>(0,1))+" "+QString::number(p01x.at<double>(0,2))+"\n";
+            out << QString::number(p10x.at<double>(0,0))+" "+QString::number(p10x.at<double>(0,1))+" "+QString::number(p10x.at<double>(0,2))+"\n";
+            out << QString::number(p11x.at<double>(0,0))+" "+QString::number(p11x.at<double>(0,1))+" "+QString::number(p11x.at<double>(0,2))+"\n";*/
+            /*out << QString::number(i)+"\n"+QString::number(p01.at<double>(0,0)/p01.at<double>(3,0))+" "+QString::number(p01.at<double>(1,0)/p01.at<double>(3,0))+";\n";
+            out << QString::number(i)+"\n"+QString::number(p10.at<double>(0,0)/p10.at<double>(3,0))+" "+QString::number(p10.at<double>(1,0)/p10.at<double>(3,0))+";\n";
+            out << QString::number(i)+"\n"+QString::number(p11.at<double>(0,0)/p11.at<double>(3,0))+" "+QString::number(p11.at<double>(1,0)/p11.at<double>(3,0))+";\n";*/
         }
-        //print Matches on images and show images
-        cv::drawMatches(over_img,keypoints_over, // 1st image and its keypoints
-                        under_img,keypoints_under, // 2nd image and its keypoints
-                        show_matches,            // the matches
-                        imageMatches,      // the image produced
-                        cv::Scalar(255,255,255)); // color of the lines
-        ui->label->show();
-        show_cvimg(imageMatches,2);
-
-        //get corresponding points
-        for( int i = 0; i < good_matches.size(); i++ )
-        {
-            //-- Get the keypoints from the good matches
-            matchpoints_1.push_back( keypoints_over[ good_matches[i].queryIdx ].pt );
-            matchpoints_2.push_back( keypoints_under[ good_matches[i].trainIdx ].pt );
-        }
-
-        //calculate perspective transformation
-        H = cv::findHomography(matchpoints_1,matchpoints_2,CV_RANSAC);
-        //output time taken in seconds
-        ui->label_time->setNum((double)(((int)(100.0*(((double)cv::getTickCount() - t)/cv::getTickFrequency())))/100.0));
+        //H.mul(1/counter);
+        file.close();
     }
     else
     {
@@ -279,10 +334,6 @@ void MainWindow::on_button_apply_clicked()
         cv::Mat subImg = result(cv::Rect(l,t,r-l,b-t));
         result = subImg.resize(result.size,1);*/
 
-        //ui->img_over->hide();
-        //ui->img_under->hide();
-        ui->under_scrollArea->hide();
-        ui->over_scrollArea->hide();
         show_cvimg(result,3);
         position = 0;
         ready = true;
@@ -347,6 +398,12 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
             }
                 break;
             }
+            default:
+            {
+            QMessageBox msgBox;
+            msgBox.setText(QString::number(e->key()));
+            msgBox.exec();
+            }
         }
     }
 }
@@ -358,7 +415,7 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
  */
 cv::Mat MainWindow::read_linear(QString path)
 {
-    cv::Mat pic;
+    cv::Mat pic = cv::imread(path.toLatin1().data(), -1);
     QString identifer = path.right(31);
     int iso = 0;
     double lowerClip, upperClip,a,b,c,d,e,f;
@@ -433,7 +490,7 @@ cv::Mat MainWindow::read_linear(QString path)
             }
         }
     }
-
+    return pic;
 }
 
 /*Method that converts cv::Mat to QImage and displays it on a label
@@ -455,37 +512,46 @@ void MainWindow::show_cvimg(cv::Mat &img, int f)
     // display QImage on label
     if (f == 0)
     {
-        img_left = new QLabel;
-        img_left->setPixmap(QPixmap::fromImage(qimg));
-        ui->under_scrollArea->setBackgroundRole(QPalette::Dark);
-        ui->under_scrollArea->setWidget(img_left);
-
-        //qimg = qimg.scaledToWidth(500);
-        //ui->img_under->setPixmap(QPixmap::fromImage(qimg));
-        //ui->img_under->resize(ui->img_under->pixmap()->size());
+        ui->label_under->show();
+        ui->label_over->show();
+        ui->label->hide();
+        ui->scrollArea->hide();
+        qimg = qimg.scaledToWidth(500);
+        ui->label_under->setPixmap(QPixmap::fromImage(qimg));
+        ui->label_under->resize(ui->label_under->pixmap()->size());
     }
     else if (f == 1)
     {
-        img_right = new QLabel;
-        img_right->setPixmap(QPixmap::fromImage(qimg));
-        ui->over_scrollArea->setBackgroundRole(QPalette::Dark);
-        ui->over_scrollArea->setWidget(img_right);
-        //qimg = qimg.scaledToWidth(500);
-        //ui->img_over->setPixmap(QPixmap::fromImage(qimg));
-        //ui->img_over->resize(ui->img_over->pixmap()->size());
+        ui->label_under->show();
+        ui->label_over->show();
+        ui->label->hide();
+        ui->scrollArea->hide();
+        qimg = qimg.scaledToWidth(500);
+        ui->label_over->setPixmap(QPixmap::fromImage(qimg));
+        ui->label_over->resize(ui->label_over->pixmap()->size());
     }
     else if (f == 2)
     {
+        ui->label->show();
         qimg = qimg.scaledToWidth(1005);
         ui->label->setPixmap(QPixmap::fromImage(qimg));
         ui->label->resize(ui->label->pixmap()->size());
     }
     else if (f == 3)
     {
-        //ui->label->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Ignored);
-        qimg = qimg.scaledToWidth(1200);
-        ui->label->setPixmap(QPixmap::fromImage(qimg));
-        ui->label->resize(ui->label->pixmap()->size());
+        int v = ui->scrollArea->verticalScrollBar()->value();
+        int h = ui->scrollArea->horizontalScrollBar()->value();
+        ui->label_under->hide();
+        ui->label_over->hide();
+        ui->label->hide();
+        ui->scrollArea->show();
+        img_right = new QLabel;
+        img_right->setPixmap(QPixmap::fromImage(qimg));
+        ui->scrollArea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        ui->scrollArea->setBackgroundRole(QPalette::Dark);
+        ui->scrollArea->setWidget(img_right);
+        ui->scrollArea->verticalScrollBar()->setValue(v);
+        ui->scrollArea->horizontalScrollBar()->setValue(h);
     }
 }
 

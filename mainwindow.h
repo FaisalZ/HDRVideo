@@ -32,8 +32,6 @@ private slots:
 
     void slider_sets_nMatches_value(int value);
 
-    void slider_sets_zoom_value(int value);
-
     void on_button_open_under_clicked();
 
     void on_button_open_over_clicked();
