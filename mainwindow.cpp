@@ -241,9 +241,9 @@ void MainWindow::on_button_calc_offset_clicked()
             image_position = image_position+10;
         }//end while (every 10th frame)
         //create a csv file to store the Homography
-        QFile file("/Users/FaisalZ/Desktop/out.csv");
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
-        QTextStream out(&file);
+        //QFile file("/Users/FaisalZ/Desktop/out.csv");
+        //file.open(QIODevice::WriteOnly | QIODevice::Text);
+        //QTextStream out(&file);
         int counter = 0;
         Hom.at(0).copyTo(H);
         for(int i = 0; i < Hom.size(); i++)
@@ -285,7 +285,7 @@ void MainWindow::on_button_calc_offset_clicked()
             out << QString::number(i)+"\n"+QString::number(p11.at<double>(0,0)/p11.at<double>(3,0))+" "+QString::number(p11.at<double>(1,0)/p11.at<double>(3,0))+";\n";*/
         }
         //H.mul(1/counter);
-        file.close();
+        //file.close();
     }
     else
     {
