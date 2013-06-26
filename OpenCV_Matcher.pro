@@ -12,10 +12,14 @@ TARGET = OpenCV_Matcher
 TEMPLATE = app
 
 
-SOURCES += main.cpp\
-        mainwindow.cpp
+SOURCES += mainwindow.cpp\
+    main.cpp \
+    linear.cpp \
+    img_ops.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h \
+    linear.h \
+    img_ops.h
 
 FORMS    += mainwindow.ui
 

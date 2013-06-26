@@ -32,6 +32,12 @@ private slots:
 
     void slider_sets_nMatches_value(int value);
 
+    void slider_sets_lower_value(int value);
+
+    void slider_sets_upper_value(int value);
+
+    void slider_sets_hdr_value(int value);
+
     void on_button_open_under_clicked();
 
     void on_button_open_over_clicked();
@@ -42,7 +48,9 @@ private slots:
 
     void keyPressEvent(QKeyEvent *e);
 
-    cv::Mat read_linear(QString path);
+    void on_button_join_clicked();
+
+    void on_button_render_clicked();
 
 private:
     Ui::MainWindow *ui;
@@ -50,6 +58,7 @@ private:
     std::vector< cv::Point2f > matchpoints_1,matchpoints_2;
     QStringList under_list, over_list;
     cv::Mat H;
+    cv::Mat img, img_o, img_u;
     //custom adjustable
     double feature_tresh;
     int nMatches;
@@ -62,6 +71,8 @@ private:
     //position for review
     int position;
     bool ready;
+    double min_o, max_o;
+    double min_u, max_u;
 };
 
 #endif // MAINWINDOW_H

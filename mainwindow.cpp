@@ -15,6 +15,9 @@
 #include <QMessageBox>
 #include <QScrollArea>
 #include <QKeyEvent>
+#include <QProgressDialog>
+#include <linear.h>
+#include <img_ops.h>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -24,10 +27,15 @@ MainWindow::MainWindow(QWidget *parent) :
     connect( ui->slider_feature_tresh, SIGNAL( valueChanged(int) ), this   , SLOT(  slider_sets_feature_value(int) ) );
     connect( ui->slider_nndr, SIGNAL( valueChanged(int) ), this   , SLOT( slider_sets_nndr_value(int) ) );
     connect( ui->slider_nMatches, SIGNAL( valueChanged(int) ), this  , SLOT( slider_sets_nMatches_value(int) ) );
+    connect( ui->slider_lower, SIGNAL( valueChanged(int) ), this  , SLOT( slider_sets_lower_value(int) ) );
+    connect( ui->slider_upper, SIGNAL( valueChanged(int) ), this  , SLOT( slider_sets_upper_value(int) ) );
+    connect( ui->slider_hdr_shift, SIGNAL( valueChanged(int) ), this  , SLOT( slider_sets_hdr_value(int) ) );
     //set initial values
     slider_sets_feature_value(ui->slider_feature_tresh->value());
     slider_sets_nndr_value(ui->slider_nndr->value());
     slider_sets_nMatches_value(ui->slider_nMatches->value());
+    //slider_sets_lower_value(ui->slider_lower->value());
+    //slider_sets_upper_value(ui->slider_upper->value());
     ui->label->hide();
     ui->scrollArea->hide();
 }
@@ -55,15 +63,38 @@ void MainWindow::slider_sets_nMatches_value(int value)
     nMatches = value;
 }
 
+void MainWindow::slider_sets_lower_value(int value)
+{
+    ui->label_lower->setNum((float)value/6.375f);
+    img = img_ops::blend_images(img_u,img_o,((float)ui->slider_upper->value()/6.375f),((float)value/6.375f));
+    slider_sets_hdr_value(ui->slider_hdr_shift->value());
+}
+
+void MainWindow::slider_sets_upper_value(int value)
+{
+    ui->label_upper->setNum((float)value/6.375f);
+    img = img_ops::blend_images(img_u,img_o,((float)value/6.375f),((float)ui->slider_lower->value()/6.375f));
+    slider_sets_hdr_value(ui->slider_hdr_shift->value());
+}
+
+void MainWindow::slider_sets_hdr_value(int value)
+{
+    float factor = qPow(2,((float)value/16.0f)-7);
+    cv::Mat img_new = img*factor;
+    img_new.convertTo(img_new, CV_8U, 256);
+    show_cvimg(img_new,3);
+}
+
+
+
 void MainWindow::on_button_open_under_clicked()
 {
     under_list = QFileDialog::getOpenFileNames(this,tr("Open underexposed Images"), ".",tr("Image Files (*.png)"));
     under_list.sort();
     if (under_list.length() > 0)
     {
-        cv::Mat image= cv::imread(under_list[0].toLatin1().data(), -1);
-        //image = cvLoadImage(under_list[0].toLatin1().data(),2);
-        show_cvimg(image,0);
+        img_u = Linear::read_linear(under_list[0],1,min_u,max_u);
+        show_cvimg(img_u,0);
     }
 }
 
@@ -73,9 +104,9 @@ void MainWindow::on_button_open_over_clicked()
     over_list.sort();
     if (over_list.length() > 0)
     {
-        cv::Mat image= cv::imread(over_list[0].toLatin1().data(), -1);
+        img_o = Linear::read_linear(over_list[0],10,min_o,max_o);
         //image = cvLoadImage(over_list[0].toLatin1().data(),2);
-        show_cvimg(image,1);
+        show_cvimg(img_o,1);
     }
 }
 
@@ -106,15 +137,33 @@ void MainWindow::on_button_calc_offset_clicked()
 
         //loop variables
         QVector< cv::Mat > Hom;
-        int image_position = 0;
-
 
         //perform for every 10th frame
-        while(image_position < over_list.size() && image_position < under_list.size())
+        int max;
+        bool stop = false;
+        (over_list.size() < under_list.size()) ? max = over_list.size() : max = under_list.size();
+        QProgressDialog progress("Calculating Homography...", "Abort", 0, max);
+                progress.setWindowModality(Qt::WindowModal);
+
+        for(int looper = 0; looper < max; looper= looper+10)
         {
+            progress.setValue(looper);
+            if (progress.wasCanceled())
+            {
+                stop = true;
+                break;
+            }
+
             //load two images
-            cv::Mat under_img = cv::imread(under_list[image_position].toLatin1().data());
-            cv::Mat over_img  = cv::imread(over_list[image_position].toLatin1().data());
+            /*cv::Mat under_img = cv::imread(under_list[looper].toLatin1().data());
+            cv::Mat over_img  = cv::imread(over_list[looper].toLatin1().data());*/
+            cv::Mat under_img = Linear::read_linear(under_list[looper],1,min_o,max_o);
+            cv::pow(under_img,(1.0f/2.2f),under_img);
+            under_img.convertTo(under_img, CV_8U, 256);
+            ui->label_2->setNum(under_img.type());
+            cv::Mat over_img  = Linear::read_linear(over_list[looper],10,min_o,max_o);
+            cv::pow(over_img,(1.0f/2.2f),over_img);
+            over_img.convertTo(over_img, CV_8U, 256);
 
             //clear data
             keypoints_over.clear();
@@ -129,7 +178,7 @@ void MainWindow::on_button_calc_offset_clicked()
             //draw keypoints on image & display images
             cv::drawKeypoints(under_img,keypoints_under,under_img_key,cv::Scalar(0,255,0),cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
             cv::drawKeypoints(over_img,keypoints_over,over_img_key,cv::Scalar(0,255,0),cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-            if(image_position == 0)
+            if(looper == 0)
             {
                 show_cvimg(under_img_key,0);
                 show_cvimg(over_img_key,1);
@@ -196,7 +245,7 @@ void MainWindow::on_button_calc_offset_clicked()
                     }
                 }
             }
-            if(image_position == 0)
+            if(looper == 0)
             {
                 ui->label_matches->setNum((int)good_matches.size());
             }
@@ -212,7 +261,7 @@ void MainWindow::on_button_calc_offset_clicked()
                 show_matches.erase(show_matches.begin()+nMatches+1, show_matches.end());
             }
 
-            if(image_position == 0)
+            if(looper == 0)
             {
                 //print Matches on images and show images
                 cv::drawMatches(over_img,keypoints_over, // 1st image and its keypoints
@@ -234,58 +283,77 @@ void MainWindow::on_button_calc_offset_clicked()
             //calculate perspective transformation
             Hom.append(cv::findHomography(matchpoints_1,matchpoints_2,CV_RANSAC));
             //output time taken in seconds
-            if(image_position == 0)
+            if(looper == 0)
             {
                 ui->label_time->setNum((double)(((int)(100.0*(((double)cv::getTickCount() - t)/cv::getTickFrequency())))/100.0));
             }
-            image_position = image_position+10;
-        }//end while (every 10th frame)
-        //create a csv file to store the Homography
-        //QFile file("/Users/FaisalZ/Desktop/out.csv");
-        //file.open(QIODevice::WriteOnly | QIODevice::Text);
-        //QTextStream out(&file);
-        int counter = 0;
-        Hom.at(0).copyTo(H);
-        for(int i = 0; i < Hom.size(); i++)
+        }//end for (every 10th frame)
+        if (stop != true)
         {
-            counter++;
-            if(i != 0)
+            //create a csv file to store the Homography
+            QString d = QFileInfo(over_list[0]).absoluteDir().absolutePath();
+            QFile file(d+"/out.csv");
+            file.open(QIODevice::WriteOnly | QIODevice::Text);
+            QTextStream out(&file);
+            int counter = 0;
+            Hom.at(0).copyTo(H);
+            for(int i = 0; i < Hom.size(); i++)
             {
-                //H = H+Hom.at(i);
+                counter++;
+                if(i != 0)
+                {
+                    add(H,Hom.at(i),H);
+                    H=H/2;
+                }
+                cv::Mat p00(3,1,H.type());
+                p00.at<double>(0,0) = 0;
+                p00.at<double>(1,0) = 0;
+                p00.at<double>(2,0) = 1;
+                cv::Mat p01(3,1,H.type());
+                p01.at<double>(0,0) = under_img_key.cols-1;
+                p01.at<double>(1,0) = 0;
+                p01.at<double>(2,0) = 1;
+                cv::Mat p10(3,1,H.type());
+                p10.at<double>(3,1) = 0;
+                p10.at<double>(1,0) = under_img_key.rows-1;
+                p10.at<double>(2,0) = 1;
+                cv::Mat p11(3,1,H.type());
+                p11.at<double>(0,0) = under_img_key.cols-1;
+                p11.at<double>(1,0) = under_img_key.rows-1;
+                p11.at<double>(2,0) = 1;
+                cv::Mat p00x;
+                gemm(Hom.at(i),p00,1,NULL,0,p00x);
+                cv::Mat p01x;
+                gemm(Hom.at(i),p01,1,NULL,0,p01x);
+                cv::Mat p10x;
+                gemm(Hom.at(i),p10,1,NULL,0,p10x);
+                cv::Mat p11x;
+                gemm(Hom.at(i),p11,1,NULL,0,p11x);
+                /*if (i == 0)
+                {
+                    //Output Homography Matrix
+                    out << QString::number(Hom.at(i).at<double>(0,0))+" "+QString::number(Hom.at(i).at<double>(0,1))+" "+QString::number(Hom.at(i).at<double>(0,2))+"\n";
+                    out << QString::number(Hom.at(i).at<double>(0,1))+" "+QString::number(Hom.at(i).at<double>(1,1))+" "+QString::number(Hom.at(i).at<double>(2,1))+"\n";
+                    out << QString::number(Hom.at(i).at<double>(0,2))+" "+QString::number(Hom.at(i).at<double>(1,2))+" "+QString::number(Hom.at(i).at<double>(2,2))+"\n\n";
+                }*/
+                //Output Points
+                out << QString::number(p00x.at<double>(0,0)/p00x.at<double>(2,0))+","+QString::number(p00x.at<double>(1,0)/p00x.at<double>(2,0))+",";
+                out << QString::number(p01x.at<double>(0,0)/p01x.at<double>(2,0))+","+QString::number(p01x.at<double>(1,0)/p01x.at<double>(2,0))+",";
+                out << QString::number(p10x.at<double>(0,0)/p10x.at<double>(2,0))+","+QString::number(p10x.at<double>(1,0)/p10x.at<double>(2,0))+",";
+                out << QString::number(p11x.at<double>(0,0)/p11x.at<double>(2,0))+","+QString::number(p11x.at<double>(1,0)/p11x.at<double>(2,0))+"\n";
+                /*out << QString::number(i)+"\n"+QString::number(p01.at<double>(0,0)/p01.at<double>(3,0))+" "+QString::number(p01.at<double>(1,0)/p01.at<double>(3,0))+";\n";
+                out << QString::number(i)+"\n"+QString::number(p10.at<double>(0,0)/p10.at<double>(3,0))+" "+QString::number(p10.at<double>(1,0)/p10.at<double>(3,0))+";\n";
+                out << QString::number(i)+"\n"+QString::number(p11.at<double>(0,0)/p11.at<double>(3,0))+" "+QString::number(p11.at<double>(1,0)/p11.at<double>(3,0))+";\n";*/
             }
-            /*cv::Mat p00(1,3,H.type());
-            p00.at<double>(0,0) = 0;
-            p00.at<double>(0,1) = 0;
-            p00.at<double>(0,2) = 1;
-            cv::Mat p01(1,3,H.type());
-            p01.at<double>(0,0) = under_img_key.cols-1;
-            p01.at<double>(0,1) = 0;
-            p01.at<double>(0,2) = 1;
-            cv::Mat p10(1,3,H.type());
-            p10.at<double>(0,0) = 0;
-            p10.at<double>(0,1) = under_img_key.rows-1;
-            p10.at<double>(0,2) = 1;
-            cv::Mat p11(1,3,H.type());
-            p11.at<double>(0,0) = under_img_key.cols-1;
-            p11.at<double>(0,1) = under_img_key.rows-1;
-            p11.at<double>(0,2) = 1;
-            cv::Mat p00x = H*p00;
-            cv::Mat p01x = H*p01;
-            cv::Mat p10x = H*p10;
-            cv::Mat p11x = H*p11;
-            out << QString::number(H.at<double>(0,0))+" "+QString::number(H.at<double>(1,0))+" "+QString::number(H.at<double>(2,0))+"\n";
-            out << QString::number(H.at<double>(1,0))+" "+QString::number(H.at<double>(1,1))+" "+QString::number(H.at<double>(1,2))+"\n";
-            out << QString::number(H.at<double>(2,0))+" "+QString::number(H.at<double>(2,1))+" "+QString::number(H.at<double>(2,2))+"\n\n";
-            out << QString::number(p00x.at<double>(0,0))+" "+QString::number(p00x.at<double>(0,1))+" "+QString::number(p00x.at<double>(0,2))+"\n";
-            out << QString::number(p01x.at<double>(0,0))+" "+QString::number(p01x.at<double>(0,1))+" "+QString::number(p01x.at<double>(0,2))+"\n";
-            out << QString::number(p10x.at<double>(0,0))+" "+QString::number(p10x.at<double>(0,1))+" "+QString::number(p10x.at<double>(0,2))+"\n";
-            out << QString::number(p11x.at<double>(0,0))+" "+QString::number(p11x.at<double>(0,1))+" "+QString::number(p11x.at<double>(0,2))+"\n";*/
-            /*out << QString::number(i)+"\n"+QString::number(p01.at<double>(0,0)/p01.at<double>(3,0))+" "+QString::number(p01.at<double>(1,0)/p01.at<double>(3,0))+";\n";
-            out << QString::number(i)+"\n"+QString::number(p10.at<double>(0,0)/p10.at<double>(3,0))+" "+QString::number(p10.at<double>(1,0)/p10.at<double>(3,0))+";\n";
-            out << QString::number(i)+"\n"+QString::number(p11.at<double>(0,0)/p11.at<double>(3,0))+" "+QString::number(p11.at<double>(1,0)/p11.at<double>(3,0))+";\n";*/
+            file.close();
+            ui->button_join->setEnabled(true);
+            ui->button_render->setEnabled(true);
         }
-        //H.mul(1/counter);
-        //file.close();
+        else //progress aborted
+        {
+            H.release();
+            Hom.clear();
+        }
     }
     else
     {
@@ -304,36 +372,6 @@ void MainWindow::on_button_apply_clicked()
         cv::Mat result;
         cv::warpPerspective(over_img,result,H,cv::Size(under_img.cols,under_img.rows));
 
-        //obsolent: croping images to not view black edges
-        /*cv::Mat p00(1,3,H.type());
-        p00.at<double>(0,0) = 0;
-        p00.at<double>(1,0) = 0;
-        p00.at<double>(2,0) = 1;
-        cv::Mat p01(1,3,H.type());
-        p01.at<double>(0,0) = result.cols-1;
-        p01.at<double>(1,0) = 0;
-        p01.at<double>(2,0) = 1;
-        cv::Mat p10(1,3,H.type());
-        p10.at<double>(0,0) = 0;
-        p10.at<double>(1,0) = result.rows-1;
-        p10.at<double>(2,0) = 1;
-        cv::Mat p11(1,3,H.type());
-        p11.at<double>(0,0) = result.cols-1;
-        p11.at<double>(1,0) = result.rows-1;
-        p11.at<double>(2,0) = 1;
-        p00 = p00*H;
-        p01 = p01*H;
-        p10 = p10*H;
-        p11 = p11*H;
-        int t,b,l,r;
-        (p00.at<double>(1,0) > p01.at<double>(1,0)) ? t = p00.at<double>(1,0) : t = p01.at<double>(1,0);
-        (p00.at<double>(0,0) > p10.at<double>(0,0)) ? l = p00.at<double>(0,0) : l = p10.at<double>(0,0);
-        (p01.at<double>(1,0) < p11.at<double>(1,0)) ? r = p01.at<double>(1,0) : r = p11.at<double>(1,0);
-        (p10.at<double>(0,0) < p11.at<double>(0,0)) ? b = p10.at<double>(0,0) : b = p11.at<double>(0,0);
-
-        cv::Mat subImg = result(cv::Rect(l,t,r-l,b-t));
-        result = subImg.resize(result.size,1);*/
-
         show_cvimg(result,3);
         position = 0;
         ready = true;
@@ -345,6 +383,30 @@ void MainWindow::on_button_apply_clicked()
         {
             cv::imwrite(filename.toLatin1().data(),result);
         }
+    }
+    else
+    {
+        QMessageBox msgBox;
+        msgBox.setText("You need to calculate the offset first!");
+        msgBox.exec();
+    }
+}
+
+void MainWindow::on_button_join_clicked()
+{
+    if(over_list.length() > 0 && under_list.length() > 0 && !H.empty() && !img_o.empty() && !img_u.empty())
+    {
+        cv::warpPerspective(img_o,img_o,H,cv::Size(img_o.cols,img_o.rows));
+
+        int upper = ui->slider_upper->value();
+        int lower = ui->slider_lower->value();
+
+        img = img_ops::blend_images(img_u,img_o,((float)upper/6.375f),((float)lower/6.375f));
+
+        slider_sets_hdr_value(ui->slider_hdr_shift->value());
+        ui->slider_hdr_shift->setEnabled(true);
+        ui->slider_upper->setEnabled(true);
+        ui->slider_lower->setEnabled(true);
     }
     else
     {
@@ -400,97 +462,12 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
             }
             default:
             {
-            QMessageBox msgBox;
+            /*QMessageBox msgBox;
             msgBox.setText(QString::number(e->key()));
-            msgBox.exec();
+            msgBox.exec();*/
             }
         }
     }
-}
-
-
-/*Method that reads an png image and converts it into linear
- *@param    &path       path to image
- *@return   cv::Mat     linearized image
- */
-cv::Mat MainWindow::read_linear(QString path)
-{
-    cv::Mat pic = cv::imread(path.toLatin1().data(), -1);
-    QString identifer = path.right(31);
-    int iso = 0;
-    double lowerClip, upperClip,a,b,c,d,e,f;
-    identifer = identifer.left(7);
-    if(identifer == "001C003" ||
-       identifer == "001C011" ||
-       identifer == "005C003" ||
-       identifer == "005C005")
-    {
-        iso = 1600;
-        lowerClip = floor(0.125*65535);
-        upperClip = ceil(0.915*65535);
-        a = 5.555556;
-        b = 0.038625;
-        c = 0.237781;
-        d = 0.387093;
-        e = 5.163350;
-        f = 0.092824;
-    }
-    if(identifer == "002C001" ||
-       identifer == "002C004" ||
-       identifer == "002C006" ||
-       identifer == "002C012" ||
-       identifer == "003C005" ||
-       identifer == "004C003" ||
-       identifer == "004C011" ||
-       identifer == "004C020" ||
-       identifer == "004C021" ||
-       identifer == "005C003" ||
-       identifer == "005C005" ||
-       identifer == "003C005" ||
-       identifer == "006C003" ||
-       identifer == "006C008")
-    {
-        iso = 800;
-        lowerClip = floor(0.15*65535);
-        upperClip = ceil(0.882*65535);
-        a = 5.555556;
-        b = 0.052272;
-        c = 0.247190;
-        d = 0.385537;
-        e = 5.367655;
-        f = 0.092809;
-    }
-
-    if(iso == 0)
-    {
-        QMessageBox msgBox;
-        msgBox.setText("Unable to identify iso value.");
-        msgBox.exec();
-    }
-    else
-    {
-        pic = cv::imread(path.toLatin1().data(), -1);
-        double index = e*lowerClip+f;
-        for(int y = 0; y < pic.rows; y++)
-        {
-            for(int x = 0; x < pic.cols; x++)
-            {
-                if(pic.at<double>(x,y) > upperClip)
-                {
-                    pic.at<double>(x,y) = upperClip;
-                }
-                if(pic.at<double>(x,y) > index)
-                {
-                    pic.at<double>(x,y) = (qPow(10,(pic.at<double>(x,y)-d)/c)-b)/a;
-                }
-                else
-                {
-                    pic.at<double>(x,y) = (pic.at<double>(x,y)-f)/e;
-                }
-            }
-        }
-    }
-    return pic;
 }
 
 /*Method that converts cv::Mat to QImage and displays it on a label
@@ -506,6 +483,12 @@ void MainWindow::show_cvimg(cv::Mat &img, int f)
     if (img_new.type() == 18)
     {
         img_new.convertTo(img_new, CV_8U, 0.00390625);
+    }
+    //convert from float to 8bit
+    if (img_new.type() == 21)
+    {
+        cv::pow(img_new,(1.0f/2.2f),img_new);
+        img_new.convertTo(img_new, CV_8U, 256);
     }
     // convert cv::Mat to QImage and resize the image to fit the lable
     QImage qimg= QImage((const unsigned char*)(img_new.data),img_new.cols,img_new.rows,QImage::Format_RGB888);
@@ -555,22 +538,34 @@ void MainWindow::show_cvimg(cv::Mat &img, int f)
     }
 }
 
+void MainWindow::on_button_render_clicked()
+{
+    int max;
+    (over_list.size() < under_list.size()) ? max = over_list.size() : max = under_list.size();
+    for(int i = 0; i < max; i++)
+    {
+        cv::Mat over = Linear::read_linear(over_list[i],10,min_u,max_u);
+        cv::Mat under = Linear::read_linear(under_list[i],1,min_u,max_u);
 
+        cv::warpPerspective(over,over,H,cv::Size(under.cols,under.rows));
 
+        int upper = ui->slider_upper->value();
+        int lower = ui->slider_lower->value();
+        cv::Mat linear = img_ops::blend_images(under,over,((float)upper/6.375f),((float)lower/6.375f));
+        cv::Mat loga;
+        cv::log((((linear*65535.0)+(qPow(2.0,-16.0)))+16),loga);
+        loga = loga*(65535.0/32.0);
+        loga.convertTo(loga,18,1);
+        linear = linear*256;
 
+        QString linear_filename;
+        QString log_filename;
 
+        QString path = QFileInfo(over_list[0]).absoluteDir().absolutePath();
+        linear_filename = path+"/"+QFileInfo(over_list[0]).completeBaseName().right(27)+"_lin.exr";
+        log_filename = path+"/"+QFileInfo(over_list[0]).completeBaseName().right(27)+"_log.png";
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        cv::imwrite(linear_filename.toLatin1().data(),linear);
+        cv::imwrite(log_filename.toLatin1().data(),loga);
+    }
+}

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1244</width>
-    <height>467</height>
+    <height>635</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -62,7 +62,7 @@
          <x>0</x>
          <y>0</y>
          <width>1008</width>
-         <height>86</height>
+         <height>254</height>
         </rect>
        </property>
        <widget class="QScrollBar" name="verticalScrollBar">
@@ -143,7 +143,233 @@
       <property name="verticalSpacing">
        <number>8</number>
       </property>
-      <item row="14" column="1">
+      <item row="7" column="0">
+       <widget class="QSlider" name="slider_nMatches">
+        <property name="minimumSize">
+         <size>
+          <width>150</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>150</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="maximum">
+         <number>1000</number>
+        </property>
+        <property name="singleStep">
+         <number>1</number>
+        </property>
+        <property name="value">
+         <number>100</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="0" colspan="2">
+       <widget class="QPushButton" name="button_calc_offset">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background: none;</string>
+        </property>
+        <property name="text">
+         <string>Calculate Offset</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" colspan="2">
+       <widget class="QLabel" name="label_4">
+        <property name="styleSheet">
+         <string notr="true">color: rgb(255, 255, 255);</string>
+        </property>
+        <property name="text">
+         <string>Feature Treshhold</string>
+        </property>
+       </widget>
+      </item>
+      <item row="20" column="0" colspan="2">
+       <widget class="QPushButton" name="button_join">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background: none;</string>
+        </property>
+        <property name="text">
+         <string>Join</string>
+        </property>
+       </widget>
+      </item>
+      <item row="18" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="styleSheet">
+         <string notr="true">color: rgb(255, 255, 255);</string>
+        </property>
+        <property name="text">
+         <string>Upper:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="25" column="0">
+       <widget class="QLabel" name="cap_time">
+        <property name="styleSheet">
+         <string notr="true">color: rgb(255, 255, 255);</string>
+        </property>
+        <property name="text">
+         <string>Time taken (seconds):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="2">
+       <widget class="QPushButton" name="button_open_over">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background: none;</string>
+        </property>
+        <property name="text">
+         <string>open overexposed images</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0" colspan="2">
+       <widget class="QPushButton" name="button_open_under">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background: none;</string>
+        </property>
+        <property name="text">
+         <string>open underexposed images</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QSlider" name="slider_feature_tresh">
+        <property name="minimumSize">
+         <size>
+          <width>150</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>150</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="maximum">
+         <number>1000</number>
+        </property>
+        <property name="value">
+         <number>3</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="25" column="1">
+       <widget class="QLabel" name="label_time">
+        <property name="styleSheet">
+         <string notr="true">background: rgb(100, 100, 100);
+color: white;</string>
+        </property>
+        <property name="text">
+         <string>xx</string>
+        </property>
+        <property name="scaledContents">
+         <bool>false</bool>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="23" column="0">
+       <widget class="QLabel" name="cap_loaded">
+        <property name="minimumSize">
+         <size>
+          <width>150</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>150</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">color: rgb(255, 255, 255);</string>
+        </property>
+        <property name="text">
+         <string>Image Pairs loaded:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="13" column="0" colspan="2">
+       <widget class="QPushButton" name="button_apply">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background: none;</string>
+        </property>
+        <property name="text">
+         <string>Apply</string>
+        </property>
+       </widget>
+      </item>
+      <item row="24" column="1">
        <widget class="QLabel" name="label_proc">
         <property name="minimumSize">
          <size>
@@ -163,6 +389,34 @@ color: white;</string>
         </property>
         <property name="text">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;xx&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+       </widget>
+      </item>
+      <item row="26" column="0" colspan="2">
+       <widget class="QSlider" name="slider_hdr_shift">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>200</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>255</number>
+        </property>
+        <property name="singleStep">
+         <number>1</number>
+        </property>
+        <property name="value">
+         <number>127</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
@@ -214,23 +468,13 @@ color: white;</string>
         </property>
        </widget>
       </item>
-      <item row="12" column="0">
+      <item row="22" column="0">
        <widget class="QLabel" name="cap_matches">
         <property name="styleSheet">
          <string notr="true">color: rgb(255, 255, 255);</string>
         </property>
         <property name="text">
          <string>Matches calculated:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="15" column="0">
-       <widget class="QLabel" name="cap_time">
-        <property name="styleSheet">
-         <string notr="true">color: rgb(255, 255, 255);</string>
-        </property>
-        <property name="text">
-         <string>Time taken (seconds):</string>
         </property>
        </widget>
       </item>
@@ -244,50 +488,42 @@ color: white;</string>
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
-       <widget class="QLabel" name="label_feature_tresh">
+      <item row="28" column="0">
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>0</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="24" column="0">
+       <widget class="QLabel" name="cap_proc">
         <property name="minimumSize">
          <size>
-          <width>40</width>
+          <width>150</width>
           <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>150</width>
+          <height>16777215</height>
          </size>
         </property>
         <property name="styleSheet">
          <string notr="true">color: rgb(255, 255, 255);</string>
         </property>
         <property name="text">
-         <string>0</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
+         <string>Processed:</string>
         </property>
        </widget>
       </item>
-      <item row="11" column="1">
-       <widget class="QLabel" name="label_features">
-        <property name="styleSheet">
-         <string notr="true">background: rgb(100, 100, 100);
-color: white;</string>
-        </property>
-        <property name="text">
-         <string>xx</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0" colspan="2">
-       <widget class="QLabel" name="label_4">
-        <property name="styleSheet">
-         <string notr="true">color: rgb(255, 255, 255);</string>
-        </property>
-        <property name="text">
-         <string>Feature Treshhold</string>
-        </property>
-       </widget>
-      </item>
-      <item row="13" column="1">
+      <item row="23" column="1">
        <widget class="QLabel" name="label_loaded">
         <property name="minimumSize">
          <size>
@@ -310,121 +546,13 @@ color: white;</string>
         </property>
        </widget>
       </item>
-      <item row="7" column="0">
-       <widget class="QSlider" name="slider_nMatches">
-        <property name="minimumSize">
-         <size>
-          <width>150</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>150</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="maximum">
-         <number>1000</number>
-        </property>
-        <property name="singleStep">
-         <number>1</number>
-        </property>
-        <property name="value">
-         <number>100</number>
-        </property>
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="11" column="0">
+      <item row="21" column="0">
        <widget class="QLabel" name="cap_features">
         <property name="styleSheet">
          <string notr="true">color: rgb(255, 255, 255);</string>
         </property>
         <property name="text">
          <string>Features found:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="15" column="1">
-       <widget class="QLabel" name="label_time">
-        <property name="styleSheet">
-         <string notr="true">background: rgb(100, 100, 100);
-color: white;</string>
-        </property>
-        <property name="text">
-         <string>xx</string>
-        </property>
-        <property name="scaledContents">
-         <bool>false</bool>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0" colspan="2">
-       <widget class="QPushButton" name="button_open_over">
-        <property name="enabled">
-         <bool>true</bool>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">background: none;</string>
-        </property>
-        <property name="text">
-         <string>open overexposed images</string>
-        </property>
-       </widget>
-      </item>
-      <item row="16" column="0">
-       <spacer name="verticalSpacer">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>0</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="3" column="0">
-       <widget class="QSlider" name="slider_feature_tresh">
-        <property name="minimumSize">
-         <size>
-          <width>150</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>150</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="maximum">
-         <number>1000</number>
-        </property>
-        <property name="value">
-         <number>3</number>
-        </property>
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
@@ -441,73 +569,40 @@ color: white;</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="0" colspan="2">
-       <widget class="QPushButton" name="button_open_under">
+      <item row="3" column="1">
+       <widget class="QLabel" name="label_feature_tresh">
         <property name="minimumSize">
          <size>
-          <width>0</width>
+          <width>40</width>
           <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">background: none;</string>
-        </property>
-        <property name="text">
-         <string>open underexposed images</string>
-        </property>
-       </widget>
-      </item>
-      <item row="13" column="0">
-       <widget class="QLabel" name="cap_loaded">
-        <property name="minimumSize">
-         <size>
-          <width>150</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>150</width>
-          <height>16777215</height>
          </size>
         </property>
         <property name="styleSheet">
          <string notr="true">color: rgb(255, 255, 255);</string>
         </property>
         <property name="text">
-         <string>Image Pairs loaded:</string>
+         <string>0</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>
-      <item row="10" column="0" colspan="2">
-       <widget class="QPushButton" name="button_apply">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>16777215</height>
-         </size>
-        </property>
+      <item row="21" column="1">
+       <widget class="QLabel" name="label_features">
         <property name="styleSheet">
-         <string notr="true">background: none;</string>
+         <string notr="true">background: rgb(100, 100, 100);
+color: white;</string>
         </property>
         <property name="text">
-         <string>Apply</string>
+         <string>xx</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>
-      <item row="12" column="1">
+      <item row="22" column="1">
        <widget class="QLabel" name="label_matches">
         <property name="styleSheet">
          <string notr="true">background: rgb(100, 100, 100);
@@ -521,47 +616,108 @@ color: white;</string>
         </property>
        </widget>
       </item>
-      <item row="14" column="0">
-       <widget class="QLabel" name="cap_proc">
-        <property name="minimumSize">
-         <size>
-          <width>150</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>150</width>
-          <height>16777215</height>
-         </size>
-        </property>
+      <item row="19" column="1">
+       <widget class="QLabel" name="label_upper">
         <property name="styleSheet">
          <string notr="true">color: rgb(255, 255, 255);</string>
         </property>
         <property name="text">
-         <string>Processed:</string>
+         <string>40</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>
-      <item row="8" column="0" colspan="2">
-       <widget class="QPushButton" name="button_calc_offset">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
+      <item row="17" column="0">
+       <widget class="QSlider" name="slider_lower">
+        <property name="enabled">
+         <bool>false</bool>
         </property>
         <property name="maximumSize">
          <size>
-          <width>16777215</width>
+          <width>150</width>
           <height>16777215</height>
          </size>
+        </property>
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>255</number>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
+        <property name="tracking">
+         <bool>true</bool>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="14" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="styleSheet">
+         <string notr="true">color: rgb(255, 255, 255);</string>
+        </property>
+        <property name="text">
+         <string>Lower:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="19" column="0">
+       <widget class="QSlider" name="slider_upper">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>150</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>255</number>
+        </property>
+        <property name="pageStep">
+         <number>10</number>
+        </property>
+        <property name="value">
+         <number>255</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="17" column="1">
+       <widget class="QLabel" name="label_lower">
+        <property name="styleSheet">
+         <string notr="true">color: rgb(255, 255, 255);</string>
+        </property>
+        <property name="text">
+         <string>0</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="27" column="0" colspan="2">
+       <widget class="QPushButton" name="button_render">
+        <property name="enabled">
+         <bool>false</bool>
         </property>
         <property name="styleSheet">
          <string notr="true">background: none;</string>
         </property>
         <property name="text">
-         <string>Calculate Offset</string>
+         <string>Render</string>
         </property>
        </widget>
       </item>
