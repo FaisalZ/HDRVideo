@@ -20,18 +20,18 @@ cv::Mat img_ops::blend_images(cv::Mat &img_a, cv::Mat &img_b, float upper, float
             {
                 float val_o = ((float*)(img_b.data))[ y*img_b.step1()+ x*img_b.channels() + color];
                 float val_u = ((float*)(img_a.data))[ y*img_a.step1()+ x*img_a.channels() + color];
-                if(val_u < low)
+                if(val_o < low)
                 {
                     ((float*)(img.data))[y*img.step1()+ x*img.channels() + color] = val_o;
                 }
-                else if(val_u > up)
+                else if(val_o > up)
                 {
                     ((float*)(img.data))[y*img.step1()+ x*img.channels() + color] = val_u;
                 }
                 else
                 {
-                    float alpha = (val_u-low)/(up-low);
-                    float val = (alpha*val_o)+((1.0f-alpha)*val_u);
+                    float alpha = (val_o-low)/(up-low);
+                    float val = (alpha*val_u)+((1.0f-alpha)*val_o);
                     ((float*)(img.data))[y*img.step1()+ x*img.channels() + color] = val;
                 }
             }

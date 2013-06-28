@@ -131,7 +131,7 @@ void matcher::find_Homography(QStringList under_list, QStringList over_list, QTe
                 matchpoints_2.push_back( keypoints_under[ good_matches[i].trainIdx ].pt );
             }
 
-            std::cout << "|";
+            std::cout << "|" << std::flush;
 
                 Hom.append(cv::findHomography(matchpoints_1,matchpoints_2,CV_RANSAC));
                 //write to Log file

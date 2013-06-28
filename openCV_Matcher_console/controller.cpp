@@ -80,7 +80,7 @@ double controller::start(QString path)
     for(int i = 0; i < max; i++)
     {
         Renderer::render(under_list[i], over_list[i], upper, lower, H, save_path, iso);
-                std::cout << "|";
+                std::cout << "|" << std::flush;
     }
     std::cout << std::endl;
 

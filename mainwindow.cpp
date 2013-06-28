@@ -38,6 +38,8 @@ MainWindow::MainWindow(QWidget *parent) :
     //slider_sets_upper_value(ui->slider_upper->value());
     ui->label->hide();
     ui->scrollArea->hide();
+    ui->button_join->setEnabled(true);
+    ui->button_render->setEnabled(true);
 }
 
 MainWindow::~MainWindow()
@@ -65,15 +67,15 @@ void MainWindow::slider_sets_nMatches_value(int value)
 
 void MainWindow::slider_sets_lower_value(int value)
 {
-    ui->label_lower->setNum((float)value/6.375f);
-    img = img_ops::blend_images(img_u,img_o,((float)ui->slider_upper->value()/6.375f),((float)value/6.375f));
+    ui->label_lower->setNum((float)value/63.75f);
+    img = img_ops::blend_images(img_u,img_o,((float)ui->slider_upper->value()/63.75f),((float)value/63.75f));
     slider_sets_hdr_value(ui->slider_hdr_shift->value());
 }
 
 void MainWindow::slider_sets_upper_value(int value)
 {
-    ui->label_upper->setNum((float)value/6.375f);
-    img = img_ops::blend_images(img_u,img_o,((float)value/6.375f),((float)ui->slider_lower->value()/6.375f));
+    ui->label_upper->setNum((float)value/63.75f);
+    img = img_ops::blend_images(img_u,img_o,((float)value/63.75f),((float)ui->slider_lower->value()/63.75f));
     slider_sets_hdr_value(ui->slider_hdr_shift->value());
 }
 
@@ -401,7 +403,7 @@ void MainWindow::on_button_join_clicked()
         int upper = ui->slider_upper->value();
         int lower = ui->slider_lower->value();
 
-        img = img_ops::blend_images(img_u,img_o,((float)upper/6.375f),((float)lower/6.375f));
+        img = img_ops::blend_images(img_u,img_o,((float)upper/63.75f),((float)lower/63.75f));
 
         slider_sets_hdr_value(ui->slider_hdr_shift->value());
         ui->slider_hdr_shift->setEnabled(true);
@@ -411,8 +413,18 @@ void MainWindow::on_button_join_clicked()
     else
     {
         QMessageBox msgBox;
-        msgBox.setText("You need to calculate the offset first!");
+        msgBox.setText("No offest calculated!");
         msgBox.exec();
+
+        int upper = ui->slider_upper->value();
+        int lower = ui->slider_lower->value();
+
+        img = img_ops::blend_images(img_u,img_o,((float)upper/63.75f),((float)lower/63.75f));
+
+        slider_sets_hdr_value(ui->slider_hdr_shift->value());
+        ui->slider_hdr_shift->setEnabled(true);
+        ui->slider_upper->setEnabled(true);
+        ui->slider_lower->setEnabled(true);
     }
 }
 
@@ -551,7 +563,7 @@ void MainWindow::on_button_render_clicked()
 
         int upper = ui->slider_upper->value();
         int lower = ui->slider_lower->value();
-        cv::Mat linear = img_ops::blend_images(under,over,((float)upper/6.375f),((float)lower/6.375f));
+        cv::Mat linear = img_ops::blend_images(under,over,((float)upper/63.75f),((float)lower/63.75f));
         cv::Mat loga;
         cv::log((((linear*65535.0)+(qPow(2.0,-16.0)))+16),loga);
         loga = loga*(65535.0/32.0);
