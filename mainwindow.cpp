@@ -556,7 +556,6 @@ void MainWindow::on_button_render_clicked()
         cv::log((((linear*65535.0)+(qPow(2.0,-16.0)))+16),loga);
         loga = loga*(65535.0/32.0);
         loga.convertTo(loga,18,1);
-        linear = linear*256;
 
         QString linear_filename;
         QString log_filename;
