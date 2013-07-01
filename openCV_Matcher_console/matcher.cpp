@@ -36,6 +36,7 @@ void matcher::find_Homography(QStringList under_list, QStringList over_list, QTe
 
         //loop variables
         QVector< cv::Mat > Hom;
+        QVector< int > matches_counter;
 
         //perform for every nth frame
         int max;
@@ -65,115 +66,138 @@ void matcher::find_Homography(QStringList under_list, QStringList over_list, QTe
             out << "Imagepair "+QString::number(looper)+" :\n";
             out << "Keypoints found in darker img: "+QString::number(keypoints_under.size())+"\n";
             out << "Keypoints found in brighter img: "+QString::number(keypoints_over.size())+"\n";
-            //run BruteForce feature matcher
-            //the two 2 nearest neighbors per descriptor will be found
-            cv::BFMatcher matcher(cv::NORM_L2,false);
-            //matches img1 -> img2
-            matcher.knnMatch(desc_over,desc_under,matches1,2);
-            //matches img2 -> img1
-            matcher.knnMatch(desc_under,desc_over,matches2,2);
 
-            //determine the best nearest neighbor match for matches1
-            for (size_t i = 0; i < matches1.size(); ++i)
+            if(keypoints_under.size() > 20 && keypoints_over.size() > 20)
             {
-                if (matches1[i].size() > 1)
+                //run BruteForce feature matcher
+                //the two 2 nearest neighbors per descriptor will be found
+                cv::BFMatcher matcher(cv::NORM_L2,false);
+                //matches img1 -> img2
+                matcher.knnMatch(desc_over,desc_under,matches1,2);
+                //matches img2 -> img1
+                matcher.knnMatch(desc_under,desc_over,matches2,2);
+
+                //determine the best nearest neighbor match for matches1
+                for (size_t i = 0; i < matches1.size(); ++i)
                 {
-                    if(matches1[i][0].distance/matches1[i][1].distance > nndr)
+                    if (matches1[i].size() > 1)
+                    {
+                        if(matches1[i][0].distance/matches1[i][1].distance > nndr)
+                        {
+                            matches1[i].clear();
+                        }
+                    }
+                    else
                     {
                         matches1[i].clear();
                     }
                 }
-                else
+                //determine the best nearest neighbor match for matches2
+                for (size_t i = 0; i < matches2.size(); ++i)
                 {
-                    matches1[i].clear();
-                }
-            }
-            //determine the best nearest neighbor match for matches2
-            for (size_t i = 0; i < matches2.size(); ++i)
-            {
-                if (matches2[i].size() > 1)
-                {
-                    if(matches2[i][0].distance/matches2[i][1].distance > nndr)
+                    if (matches2[i].size() > 1)
+                    {
+                        if(matches2[i][0].distance/matches2[i][1].distance > nndr)
+                        {
+                            matches2[i].clear();
+                        }
+                    }
+                    else
                     {
                         matches2[i].clear();
                     }
                 }
-                else
-                {
-                    matches2[i].clear();
-                }
-            }
 
-            //perform symetric check
-            for (size_t i = 0; i < matches1.size(); ++i)
-            {
-                if(matches1[i].size() < 2)
-                    continue;
-                for (size_t j = 0; j < matches2.size(); ++j)
+                //perform symetric check
+                for (size_t i = 0; i < matches1.size(); ++i)
                 {
-                    if(matches2[j].size() < 2)
+                    if(matches1[i].size() < 2)
                         continue;
-                    if(matches1[i][0].queryIdx == matches2[j][0].trainIdx && matches2[j][0].queryIdx == matches1[i][0].trainIdx)
+                    for (size_t j = 0; j < matches2.size(); ++j)
                     {
-                        good_matches.push_back(cv::DMatch(matches1[i][0].queryIdx,matches1[i][0].trainIdx,matches1[i][0].distance));
-                        break;
+                        if(matches2[j].size() < 2)
+                            continue;
+                        if(matches1[i][0].queryIdx == matches2[j][0].trainIdx && matches2[j][0].queryIdx == matches1[i][0].trainIdx)
+                        {
+                            good_matches.push_back(cv::DMatch(matches1[i][0].queryIdx,matches1[i][0].trainIdx,matches1[i][0].distance));
+                            break;
+                        }
                     }
                 }
+
+                out << "Good matches: "+QString::number(good_matches.size())+"\n";
+
+                //get corresponding points
+                for( int i = 0; i < good_matches.size(); i++ )
+                {
+                    //-- Get the keypoints from the good matches
+                    matchpoints_1.push_back( keypoints_over[ good_matches[i].queryIdx ].pt );
+                    matchpoints_2.push_back( keypoints_under[ good_matches[i].trainIdx ].pt );
+                }
+
+                if(good_matches.size() > 20)
+                {
+                    Hom.append(cv::findHomography(matchpoints_1,matchpoints_2,CV_RANSAC));
+                    matches_counter.append(good_matches.size());
+                    //write to Log file
+                    cv::Mat p00(3,1,Hom[0].type());
+                    p00.at<double>(0,0) = 0;
+                    p00.at<double>(1,0) = 0;
+                    p00.at<double>(2,0) = 1;
+                    cv::Mat p01(3,1,Hom[0].type());
+                    p01.at<double>(0,0) = 1920;
+                    p01.at<double>(1,0) = 0;
+                    p01.at<double>(2,0) = 1;
+                    cv::Mat p10(3,1,Hom[0].type());
+                    p10.at<double>(3,1) = 0;
+                    p10.at<double>(1,0) = 1080;
+                    p10.at<double>(2,0) = 1;
+                    cv::Mat p11(3,1,Hom[0].type());
+                    p11.at<double>(0,0) = 1920;
+                    p11.at<double>(1,0) = 1080;
+                    p11.at<double>(2,0) = 1;
+                    cv::Mat p00x;
+                    gemm(Hom[counter],p00,1,NULL,0,p00x);
+                    cv::Mat p01x;
+                    gemm(Hom[counter],p01,1,NULL,0,p01x);
+                    cv::Mat p10x;
+                    gemm(Hom[counter],p10,1,NULL,0,p10x);
+                    cv::Mat p11x;
+                    gemm(Hom[counter],p11,1,NULL,0,p11x);
+                    //Output Points
+                    out << "Offset of edge Pixels: \n";
+                    out << QString::number(p00x.at<double>(0,0)/p00x.at<double>(2,0))+","+QString::number(p00x.at<double>(1,0)/p00x.at<double>(2,0))+",";
+                    out << QString::number(p01x.at<double>(0,0)/p01x.at<double>(2,0))+","+QString::number(p01x.at<double>(1,0)/p01x.at<double>(2,0))+",";
+                    out << QString::number(p10x.at<double>(0,0)/p10x.at<double>(2,0))+","+QString::number(p10x.at<double>(1,0)/p10x.at<double>(2,0))+",";
+                    out << QString::number(p11x.at<double>(0,0)/p11x.at<double>(2,0))+","+QString::number(p11x.at<double>(1,0)/p11x.at<double>(2,0))+"\n\n";
+                    counter++;
+                }
+                else
+                {
+                    out << "Ignored frame (Not enough good matches)\n";
+                }
             }
-
-            out << "Good matches: "+QString::number(good_matches.size())+"\n\n";
-
-            //get corresponding points
-            for( int i = 0; i < good_matches.size(); i++ )
+            else
             {
-                //-- Get the keypoints from the good matches
-                matchpoints_1.push_back( keypoints_over[ good_matches[i].queryIdx ].pt );
-                matchpoints_2.push_back( keypoints_under[ good_matches[i].trainIdx ].pt );
+                out << "Ignored frame (Not enough keypoints.)\n";
             }
-
-            std::cout << "|" << std::flush;
-
-                Hom.append(cv::findHomography(matchpoints_1,matchpoints_2,CV_RANSAC));
-                //write to Log file
-                cv::Mat p00(3,1,Hom[0].type());
-                p00.at<double>(0,0) = 0;
-                p00.at<double>(1,0) = 0;
-                p00.at<double>(2,0) = 1;
-                cv::Mat p01(3,1,Hom[0].type());
-                p01.at<double>(0,0) = 1920;
-                p01.at<double>(1,0) = 0;
-                p01.at<double>(2,0) = 1;
-                cv::Mat p10(3,1,Hom[0].type());
-                p10.at<double>(3,1) = 0;
-                p10.at<double>(1,0) = 1080;
-                p10.at<double>(2,0) = 1;
-                cv::Mat p11(3,1,Hom[0].type());
-                p11.at<double>(0,0) = 1920;
-                p11.at<double>(1,0) = 1080;
-                p11.at<double>(2,0) = 1;
-                cv::Mat p00x;
-                gemm(Hom[counter],p00,1,NULL,0,p00x);
-                cv::Mat p01x;
-                gemm(Hom[counter],p01,1,NULL,0,p01x);
-                cv::Mat p10x;
-                gemm(Hom[counter],p10,1,NULL,0,p10x);
-                cv::Mat p11x;
-                gemm(Hom[counter],p11,1,NULL,0,p11x);
-                //Output Points
-                out << "Offset of edge Pixels: \n";
-                out << QString::number(p00x.at<double>(0,0)/p00x.at<double>(2,0))+","+QString::number(p00x.at<double>(1,0)/p00x.at<double>(2,0))+",";
-                out << QString::number(p01x.at<double>(0,0)/p01x.at<double>(2,0))+","+QString::number(p01x.at<double>(1,0)/p01x.at<double>(2,0))+",";
-                out << QString::number(p10x.at<double>(0,0)/p10x.at<double>(2,0))+","+QString::number(p10x.at<double>(1,0)/p10x.at<double>(2,0))+",";
-                out << QString::number(p11x.at<double>(0,0)/p11x.at<double>(2,0))+","+QString::number(p11x.at<double>(1,0)/p11x.at<double>(2,0))+"\n\n";
-                counter++;
+                std::cout << "|" << std::flush;
         }//end for (every 10th frame)
+
         //average Homography
-        H = Hom[0];
-        for(int i = 1; i < Hom.size() ; i++)
+        double sum = 0;
+        for(int i = 0; i < matches_counter.size(); i++)
         {
-            H = H+Hom[i];
+            sum = sum+matches_counter[i];
         }
-        H = H/(Hom.size()-1);
+        if(Hom.size() > 0)
+        {
+            H = ((double)matches_counter[0]/(double)sum)*Hom[0];
+            for(int i = 1; i < Hom.size() ; i++)
+            {
+                H = H+((double)matches_counter[i]/(double)sum)*Hom[i];
+            }
+        }
     }
     else
     {

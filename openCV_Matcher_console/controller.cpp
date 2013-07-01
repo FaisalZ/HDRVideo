@@ -67,22 +67,30 @@ double controller::start(QString path)
     cv::Mat H;
     matcher::find_Homography(under_list, over_list, out, H, steps, sift_gamma, iso, feature_t, nndr);
     std::cout << std::endl;
-    std::cout << "Homography found." <<std::endl;
-    std::cout <<std::endl;
-    out << "\n----------------------------------\n";
-    out << "-----final homography matrix------\n";
-    out << QString::number(H.at<double>(0,0))+" "+QString::number(H.at<double>(0,1))+" "+QString::number(H.at<double>(0,2))+"\n";
-    out << QString::number(H.at<double>(1,0))+" "+QString::number(H.at<double>(1,1))+" "+QString::number(H.at<double>(1,2))+"\n";
-    out << QString::number(H.at<double>(2,0))+" "+QString::number(H.at<double>(2,1))+" "+QString::number(H.at<double>(2,2))+"\n";
-    out << "---------------------------------- \n";
-
-    std::cout << "Rendering Images..." <<std::endl;
-    for(int i = 0; i < max; i++)
+    if(!H.empty())
     {
-        Renderer::render(under_list[i], over_list[i], upper, lower, H, save_path, iso);
-                std::cout << "|" << std::flush;
+        std::cout << "Homography found." <<std::endl;
+        std::cout <<std::endl;
+        out << "\n----------------------------------\n";
+        out << "-----final homography matrix------\n";
+        out << QString::number(H.at<double>(0,0))+" "+QString::number(H.at<double>(0,1))+" "+QString::number(H.at<double>(0,2))+"\n";
+        out << QString::number(H.at<double>(1,0))+" "+QString::number(H.at<double>(1,1))+" "+QString::number(H.at<double>(1,2))+"\n";
+        out << QString::number(H.at<double>(2,0))+" "+QString::number(H.at<double>(2,1))+" "+QString::number(H.at<double>(2,2))+"\n";
+        out << "---------------------------------- \n";
+
+        std::cout << "Rendering Images..." <<std::endl;
+        for(int i = 0; i < max; i++)
+        {
+            Renderer::render(under_list[i], over_list[i], upper, lower, H, save_path, iso);
+                    std::cout << "|" << std::flush;
+        }
+        std::cout << std::endl;
     }
-    std::cout << std::endl;
+    else
+    {
+        std::cout << "ABORTED: Unable to find Homography. Not enough features."<<std::endl;
+        out << "ABORTED: Unable to find Homography. Not enough features.\n";
+    }
 
     double timer = ((double)(((int)(100.0*(((double)cv::getTickCount() - t)/cv::getTickFrequency())))/100.0));
     std::cout << "Seconds needed for scene: " << timer << std::endl;
